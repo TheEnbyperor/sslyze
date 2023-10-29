@@ -50,8 +50,16 @@ class HttpProxySettings:
         return basic_auth_token.decode("utf-8")
 
 
+@dataclass(frozen=True)
+class SocksProxySettings:
+    hostname: str
+    port: int
+    remote_dns: bool = False
+
+
 class ConnectionTypeEnum(str, Enum):
     DIRECT = "DIRECT"
+    VIA_SOCKS = "VIA_SOCKS"
     VIA_HTTP_PROXY = "VIA_HTTP_PROXY"
 
 
@@ -80,6 +88,8 @@ class ServerNetworkLocation:
     # Set if SSLyze is connecting via a proxy ie. connection_type == VIA_HTTP_PROXY
     http_proxy_settings: Optional[HttpProxySettings] = None
 
+    socks_proxy_settings: Optional[SocksProxySettings] = None
+
     @property
     def display_string(self) -> str:
         """How to display this location to a user."""
@@ -87,7 +97,9 @@ class ServerNetworkLocation:
 
     @property
     def connection_type(self) -> ConnectionTypeEnum:
-        if self.ip_address:
+        if self.socks_proxy_settings:
+            return ConnectionTypeEnum.VIA_SOCKS
+        elif self.ip_address:
             return ConnectionTypeEnum.DIRECT
         elif self.http_proxy_settings:
             return ConnectionTypeEnum.VIA_HTTP_PROXY
@@ -106,7 +118,8 @@ class ServerNetworkLocation:
                 "the server's IP address automatically."
             )
 
-        if not self.ip_address and not self.http_proxy_settings:
+        if not self.ip_address and not self.http_proxy_settings and not \
+                (self.socks_proxy_settings and self.socks_proxy_settings.remote_dns):
             # Automatically lookup the IP address
             ip_address = _do_dns_lookup(self.hostname, self.port)
             object.__setattr__(self, "ip_address", ip_address)

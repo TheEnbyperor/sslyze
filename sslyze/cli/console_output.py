@@ -111,7 +111,12 @@ class ObserverToGenerateConsoleOutput(ScannerObserver):
 
 
 def _server_location_to_network_route(server_location: ServerNetworkLocation) -> str:
-    if server_location.connection_type == ConnectionTypeEnum.VIA_HTTP_PROXY:
+    if server_location.connection_type == ConnectionTypeEnum.VIA_SOCKS:
+        assert server_location.socks_proxy_settings
+        network_route = "SOCKS proxy at {}:{}".format(
+            server_location.socks_proxy_settings.hostname, server_location.socks_proxy_settings.port
+        )
+    elif server_location.connection_type == ConnectionTypeEnum.VIA_HTTP_PROXY:
         # We do not know the server's IP address if going through a proxy
         assert server_location.http_proxy_settings
         network_route = "HTTP proxy at {}:{}".format(

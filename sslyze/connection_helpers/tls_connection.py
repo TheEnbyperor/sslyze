@@ -1,4 +1,5 @@
 import socket
+import socks
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
@@ -53,6 +54,27 @@ class _ConnectionToHttpProxyFailed(Exception):
     pass
 
 
+def _open_socket_for_connection_via_socks_proxy(
+    server_location: ServerNetworkLocation, network_timeout: int
+) -> socket.socket:
+    assert server_location.socks_proxy_settings
+    s = socks.socksocket()
+    s.set_proxy(
+        socks.SOCKS5,
+        server_location.socks_proxy_settings.hostname,
+        server_location.socks_proxy_settings.port,
+        server_location.socks_proxy_settings.remote_dns
+    )
+    s.settimeout(network_timeout)
+
+    if server_location.socks_proxy_settings.remote_dns:
+        s.connect((server_location.hostname, server_location.port))
+    else:
+        s.connect((server_location.ip_address, server_location.port))
+
+    return s
+
+
 def _open_socket_for_connection_via_http_proxy(
     server_location: ServerNetworkLocation, network_timeout: int
 ) -> socket.socket:
@@ -90,7 +112,9 @@ def _open_socket_for_connection_via_http_proxy(
 
 
 def _open_socket(server_location: ServerNetworkLocation, network_timeout: int) -> socket.socket:
-    if server_location.connection_type == ConnectionTypeEnum.VIA_HTTP_PROXY:
+    if server_location.connection_type == ConnectionTypeEnum.VIA_SOCKS:
+        return _open_socket_for_connection_via_socks_proxy(server_location, network_timeout)
+    elif server_location.connection_type == ConnectionTypeEnum.VIA_HTTP_PROXY:
         return _open_socket_for_connection_via_http_proxy(server_location, network_timeout)
     elif server_location.connection_type == ConnectionTypeEnum.DIRECT:
         return _open_socket_for_direct_connection(server_location, network_timeout)

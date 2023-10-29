@@ -4,6 +4,7 @@
 from sslyze.server_setting import (
     ServerNetworkLocation,
     ConnectionTypeEnum,
+    SocksProxySettings,
     HttpProxySettings,
     ClientAuthenticationCredentials,
     ServerNetworkConfiguration,
