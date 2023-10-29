@@ -58,21 +58,29 @@ def _open_socket_for_connection_via_socks_proxy(
     server_location: ServerNetworkLocation, network_timeout: int
 ) -> socket.socket:
     assert server_location.socks_proxy_settings
-    s = socks.socksocket()
-    s.set_proxy(
-        socks.SOCKS5,
-        server_location.socks_proxy_settings.hostname,
-        server_location.socks_proxy_settings.port,
-        server_location.socks_proxy_settings.remote_dns
-    )
-    s.settimeout(network_timeout)
 
-    if server_location.socks_proxy_settings.remote_dns:
-        s.connect((server_location.hostname, server_location.port))
-    else:
-        s.connect((server_location.ip_address, server_location.port))
+    def connect(s):
+        s.set_proxy(
+            socks.SOCKS5,
+            server_location.socks_proxy_settings.hostname,
+            server_location.socks_proxy_settings.port,
+            server_location.socks_proxy_settings.remote_dns
+        )
+        s.settimeout(network_timeout)
 
-    return s
+        if server_location.socks_proxy_settings.remote_dns:
+            s.connect((server_location.hostname, server_location.port))
+        else:
+            s.connect((server_location.ip_address, server_location.port))
+
+    try:
+        s6 = socks.socksocket(socket.AF_INET6)
+        connect(s6)
+        return s6
+    except socks.ProxyConnectionError:
+        s4 = socks.socksocket(socket.AF_INET)
+        connect(s4)
+        return s4
 
 
 def _open_socket_for_connection_via_http_proxy(
